@@ -1,0 +1,76 @@
+-- Part 1 - Create a dataset (using MySQL):
+-- Clients Table:
+CREATE TABLE Clients (
+customer_id INT auto_increment PRIMARY KEY,
+join_date DATE NOT NULL,
+age INT NOT NULL,
+gender varchar(20) NOT NULL,
+income DECIMAL NOT NULL,
+credit_score INT NOT NULL,
+education varchar(30) NOT NULL);
+
+-- Financials Table:
+CREATE TABLE Financials (
+customer_id INT NOT NULL,
+date_id DATE NOT NULL,
+balance_amount DECIMAL NOT NULL,
+deposits_amount DECIMAL NULL,
+withdrawal_amount DECIMAL NULL,
+credit_card_spending DECIMAL NULL,
+debit_card_spending DECIMAL NULL,
+cash_spending DECIMAL NULL,
+FOREING KEY (customer_id) REFERENCES clients (customer_id));
+
+-- Ledger Table:
+CREATE TABLE Ledger (
+customer_id INT NOT NULL,
+loan_size DECIMAL NOT NULL,
+loan_start_date DATE NOT NULL,
+FOREING KEY (customer_id) REFERENCES clients (customer_id));
+
+
+-- Populating the tables with mock data:
+-- Clients table:
+INSERT INTO 
+clients (join_date, age, gender, income, credit_score, education)
+VALUES
+('2016/03/21', 26, 'Female', 22000, 732, 'Bachelor Degree'),
+('2018/08/16', 19, 'Male', 10000, 300, 'Middle School'),
+('2017/10/20', 40, 'Female', 50000, 800, 'Masters Degree'),
+('2020/07/03', 25, 'Male', 12000, 450, 'Bachelor Degree'),
+('2019/01/01', 21, 'Male', 10000, 500, 'High School');
+
+--Financial table: 
+-- A .txt file (included in the zip folder, inside the Python code folder) was created with mock data for January 2023 and it was uploaded to the database via the next statement:
+LOAD DATA
+  INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/clients_financials.txt'
+INTO TABLE financials 
+
+
+-- Ledger Table:
+LOAD DATA
+  INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/ledger.txt'
+INTO TABLE ledger 
+
+-- Updating the Financials table each day:
+-- We can create an event that uploads the new financial info of the customers each day, we only need to ensure that the txt file in the uploads folder is changed every day, this can also be automated by setting a daily secure file transfer from the bank to the folder.
+DELIMITER $$
+CREATE EVENT update_financials_table
+ON SCHEDULE EVERY '1' day 
+STARTS '2023-02-01 00:00:00'
+DO 
+BEGIN
+  LOAD DATA
+    INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/clients_financials.txt'
+  INTO TABLE financials 
+END$$ 
+DELIMITER ;
+
+-- Part 2 - Create a view of Ledger <> Financials:
+CREATE VIEW financial_status_of_all_clients_with_loans AS
+SELECT l.customer_id, l.loan_size, l.loan_start_date, f.balance_amount, f.deposits_amount, f.withdrawal_amount,
+f.credit_card_spending, f.debit_card_spending, f.cash_spending 
+FROM ledger l LEFT JOIN financials f ON l.customer_id = f.customer_id 
+WHERE l.loan_start_date = f.date_id;
+
+
